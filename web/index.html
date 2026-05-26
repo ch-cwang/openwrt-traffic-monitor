@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetTrail - Real-Time Network Traffic Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-tx: #10b981; /* Emerald */
+            --accent-rx: #3b82f6; /* Blue */
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 30px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeIn 1s ease-out;
+        }
+
+        h1 {
+            font-weight: 700;
+            font-size: 2.5rem;
+            letter-spacing: -0.05em;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            height: 400px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .chart-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .table-container {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1px; /* for inner border radius effect */
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            animation: slideUp 0.8s ease-out;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+        }
+
+        th, td {
+            padding: 16px;
+            font-size: 0.95rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        tr {
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .tag-tx {
+            color: var(--accent-tx);
+            font-weight: 600;
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .tag-rx {
+            color: var(--accent-rx);
+            font-weight: 600;
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .val {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-weight: 400;
+        }
+
+        .ip-cell {
+            font-weight: 600;
+            border-right: 1px solid var(--border-color);
+            vertical-align: middle;
+            color: #fff;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>NetTrail Dashboard</h1>
+        <div class="subtitle">Real-time OpenWrt Traffic Monitoring</div>
+    </header>
+
+    <div class="charts-container">
+        <div id="txChart" class="chart-card"></div>
+        <div id="rxChart" class="chart-card"></div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Target IP</th>
+                    <th>Direction</th>
+                    <th>Total Bytes</th>
+                    <th>Peak Rate (B/s)</th>
+                    <th>Current (B/s)</th>
+                    <th>Avg (2s)</th>
+                    <th>Avg (10s)</th>
+                    <th>Avg (40s)</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- Data populated by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Apply Dark Theme to Echarts
+        const txChart = echarts.init(document.getElementById('txChart'), 'dark', { background: 'transparent' });
+        const rxChart = echarts.init(document.getElementById('rxChart'), 'dark', { background: 'transparent' });
+        
+        let timeData = [];
+        let ipSeriesData = {}; 
+
+        const chartBaseOptions = {
+            backgroundColor: 'transparent',
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                borderColor: 'rgba(255,255,255,0.1)',
+                textStyle: { color: '#fff' }
+            },
+            legend: { 
+                top: 25, 
+                textStyle: { color: '#94a3b8' },
+                icon: 'circle'
+            },
+            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+            xAxis: { 
+                type: 'category', 
+                data: timeData, 
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: '#334155' } },
+                axisLabel: { color: '#94a3b8' }
+            },
+            yAxis: { 
+                type: 'value', 
+                name: 'Rate (Bytes/s)',
+                splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
+                axisLine: { show: false },
+                axisLabel: { color: '#94a3b8' },
+                nameTextStyle: { color: '#94a3b8', padding: [0, 0, 0, 20] }
+            },
+            series: []
+        };
+
+        txChart.setOption({ 
+            ...chartBaseOptions, 
+            title: { text: 'TX Rate (Upload)', left: '0', textStyle: { color: '#fff', fontSize: 18, fontWeight: 600 } }
+        });
+        
+        rxChart.setOption({ 
+            ...chartBaseOptions, 
+            title: { text: 'RX Rate (Download)', left: '0', textStyle: { color: '#fff', fontSize: 18, fontWeight: 600 } }
+        });
+
+        // Format bytes for readability
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        async function fetchAndUpdateData() {
+            try {
+                const response = await fetch('/traffic.json?t=' + new Date().getTime());
+                const data = await response.json();
+                
+                const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = ''; 
+
+                const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+                if (timeData.length > 20) timeData.shift(); 
+                timeData.push(now);
+
+                let txSeries = [];
+                let rxSeries = [];
+
+                data.forEach(ipData => {
+                    // Update Table
+                    tbody.innerHTML += `
+                        <tr>
+                            <td rowspan="2" class="ip-cell">${ipData.ip}</td>
+                            <td><span class="tag-tx">TX (Out)</span></td>
+                            <td class="val">${formatBytes(ipData.tx_tot)}</td>
+                            <td class="val">${formatBytes(ipData.tx_peak)}</td>
+                            <td class="val">${formatBytes(ipData.tx_rate)}</td>
+                            <td class="val">${formatBytes(ipData.tx_2s)}</td>
+                            <td class="val">${formatBytes(ipData.tx_10s)}</td>
+                            <td class="val">${formatBytes(ipData.tx_40s)}</td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag-rx">RX (In)</span></td>
+                            <td class="val">${formatBytes(ipData.rx_tot)}</td>
+                            <td class="val">${formatBytes(ipData.rx_peak)}</td>
+                            <td class="val">${formatBytes(ipData.rx_rate)}</td>
+                            <td class="val">${formatBytes(ipData.rx_2s)}</td>
+                            <td class="val">${formatBytes(ipData.rx_10s)}</td>
+                            <td class="val">${formatBytes(ipData.rx_40s)}</td>
+                        </tr>
+                    `;
+
+                    // Update Chart Data
+                    if (!ipSeriesData[ipData.ip]) {
+                        ipSeriesData[ipData.ip] = { txHistory: [], rxHistory: [] };
+                    }
+                    
+                    if (ipSeriesData[ipData.ip].txHistory.length > 20) ipSeriesData[ipData.ip].txHistory.shift();
+                    if (ipSeriesData[ipData.ip].rxHistory.length > 20) ipSeriesData[ipData.ip].rxHistory.shift();
+                    
+                    ipSeriesData[ipData.ip].txHistory.push(ipData.tx_rate);
+                    ipSeriesData[ipData.ip].rxHistory.push(ipData.rx_rate);
+
+                    if (ipData.tx_tot > 0 || ipData.rx_tot > 0) {
+                        txSeries.push({
+                            name: ipData.ip, 
+                            type: 'line', 
+                            smooth: true,
+                            symbolSize: 6,
+                            lineStyle: { width: 3 },
+                            areaStyle: { opacity: 0.1 },
+                            data: ipSeriesData[ipData.ip].txHistory
+                        });
+                        rxSeries.push({
+                            name: ipData.ip, 
+                            type: 'line', 
+                            smooth: true,
+                            symbolSize: 6,
+                            lineStyle: { width: 3 },
+                            areaStyle: { opacity: 0.1 },
+                            data: ipSeriesData[ipData.ip].rxHistory
+                        });
+                    }
+                });
+
+                txChart.setOption({ xAxis: { data: timeData }, series: txSeries });
+                rxChart.setOption({ xAxis: { data: timeData }, series: rxSeries });
+
+            } catch (error) {
+                console.error('Failed to fetch traffic data:', error);
+            }
+        }
+
+        setInterval(fetchAndUpdateData, 1000);
+        
+        window.addEventListener('resize', () => { 
+            txChart.resize(); 
+            rxChart.resize(); 
+        });
+    </script>
+</body>
+</html>
