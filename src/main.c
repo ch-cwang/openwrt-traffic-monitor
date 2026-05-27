@@ -197,7 +197,7 @@ int main() {
         return 1;
     }
 
-    printf("NetTrail 守护进程已在 %s 接口启动。统计数据正写入 %s\n", device, DEFAULT_JSON_PATH);
+    printf("Traffic Monitor 守护进程已在 %s 接口启动。统计数据正写入 %s\n", device, DEFAULT_JSON_PATH);
 
     while (g_running) {
         sleep(1);
@@ -298,7 +298,7 @@ int main() {
     }
 
     // 优雅清理退出
-    printf("NetTrail 正在关机...\n");
+    printf("Traffic Monitor 正在关机...\n");
     pcap_breakloop(handle);
     pthread_join(tid, NULL);
     pcap_freecode(&fp);

@@ -5,7 +5,7 @@ LDFLAGS ?=
 LIBS = -lpcap -lpthread
 
 # Project settings
-TARGET = nettraild
+TARGET = traffic_monitor
 SRC_DIR = src
 OBJ_DIR = obj
 

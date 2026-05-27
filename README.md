@@ -1,9 +1,9 @@
-# NetTrail 🌐
+# openwrt-traffic-monitor 🌐
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-OpenWrt%20%7C%20Linux-lightgrey)
 
-NetTrail 是一款专为 Linux 和 OpenWrt 路由器设计的轻量级、高性能实时网络流量监控守护进程。它原生使用 `libpcap` 捕获网络数据包，可精确计算每个 IP 地址的 RX/TX 收发速率、滑动平均值及峰值，并将其优雅地展示在极具现代感的毛玻璃 (Glassmorphism) 风格大盘上。
+openwrt-traffic-monitor 是一款专为 Linux 和 OpenWrt 路由器设计的轻量级、高性能实时网络流量监控守护进程。它原生使用 `libpcap` 捕获网络数据包，可精确计算每个 IP 地址的 RX/TX 收发速率、滑动平均值及峰值，并将其优雅地展示在极具现代感的毛玻璃 (Glassmorphism) 风格大盘上。
 
 ## ✨ 核心特性
 
@@ -37,26 +37,26 @@ sudo apt install build-essential libpcap-dev
 make
 ```
 
-执行完毕后，将在当前目录生成 `nettraild` 二进制可执行文件。
+执行完毕后，将在当前目录生成 `traffic_monitor` 二进制可执行文件。
 
 ### 运行
 
-由于 NetTrail 需要从底层网卡抓取原始数据包，因此**必须使用 `root` 权限**运行。
+由于本程序需要从底层网卡抓取原始数据包，因此**必须使用 `root` 权限**运行。
 
 ```bash
-sudo ./nettraild
+sudo ./traffic_monitor
 ```
 
-默认情况下，NetTrail 将监听 `br-lan` 接口，并将流量统计数据以 JSON 格式输出至 `/www/traffic.json`。如有需要，您可以在编译前修改 `src/main.c` 顶部的宏定义。
+默认情况下，本程序将监听 `br-lan` 接口，并将流量统计数据以 JSON 格式输出至 `/www/traffic.json`。如有需要，您可以在编译前修改 `src/main.c` 顶部的宏定义。
 
 ---
 
 ## 📊 大盘部署
 
-NetTrail 依赖一个轻量级的 Web 服务器（如 OpenWrt 上的 `uhttpd`，或 Linux 上的 `nginx` / `python -m http.server`）来托管静态页面。
+监控大盘前端依赖一个轻量级的 Web 服务器（如 OpenWrt 上的 `uhttpd`，或 Linux 上的 `nginx` / `python -m http.server`）来托管静态页面。
 
 1. 将 `web/index.html` 复制到您的 Web 服务器的根目录（例如 OpenWrt 默认的 `/www/`）。
-2. 确保后端的 `nettraild` 守护进程正在运行，并正在持续向 `/www/traffic.json` 写入数据。
+2. 确保后端的 `traffic_monitor` 守护进程正在运行，并正在持续向 `/www/traffic.json` 写入数据。
 3. 打开浏览器，访问 `http://<您的路由器IP>/index.html`。
 
 尽情享受令人惊艳的实时数据流吧！
@@ -66,7 +66,7 @@ NetTrail 依赖一个轻量级的 Web 服务器（如 OpenWrt 上的 `uhttpd`，
 ## 🛠 项目结构
 
 ```
-net_trail/
+openwrt-traffic-monitor/
 ├── src/
 │   └── main.c         # C 语言守护进程核心源码
 ├── web/

@@ -1,6 +1,6 @@
 # Build Artifacts
 obj/
-nettraild
+traffic_monitor
 *.o
 
 # IDEs & OS files
