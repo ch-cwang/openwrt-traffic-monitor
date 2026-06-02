@@ -1,337 +1,347 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenWrt Traffic Monitor</title>
+    <title>OpenWrt 网络管理控制台</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-color: #0f172a;
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent-tx: #10b981; /* Emerald */
-            --accent-rx: #3b82f6; /* Blue */
-            --border-color: rgba(255, 255, 255, 0.1);
-        }
-
-        * {
-            box-sizing: border-box;
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
             margin: 0;
             padding: 0;
         }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%);
-            color: var(--text-main);
-            min-height: 100vh;
-            padding: 30px;
+        /* 导航栏样式  */
+        .navbar {
+            background-color: #34495e;
+            display: flex;
+            padding: 0 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-            animation: fadeIn 1s ease-out;
+        .nav-item {
+            color: #ecf0f1;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            transition: background 0.3s;
         }
 
-        h1 {
-            font-weight: 700;
-            font-size: 2.5rem;
-            letter-spacing: -0.05em;
-            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 8px;
+        .nav-item:hover,
+        .nav-item.active {
+            background-color: #2c3e50;
+            border-bottom: 3px solid #3498db;
         }
 
-        .subtitle {
-            color: var(--text-muted);
-            font-size: 1.1rem;
-            font-weight: 300;
-        }
-
-        .charts-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-bottom: 40px;
-        }
-
-        .chart-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
+        /* 页面主体容器 */
+        .container {
             padding: 20px;
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-panel {
+            display: none;
+        }
+
+        /* 默认隐藏所有面板 */
+        .page-panel.active {
+            display: block;
+        }
+
+        /* 只显示当前激活的面板 */
+
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            border-left: 5px solid #3498db;
+            padding-left: 10px;
+        }
+
+        /* 流量监控模块样式 */
+        .charts-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .chart {
+            width: 48%;
             height: 400px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            box-sizing: border-box;
         }
 
-        .chart-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .table-container {
-            background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 1px; /* for inner border radius effect */
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-            overflow: hidden;
-            animation: slideUp 0.8s ease-out;
-        }
-
+        /* 通用表格样式 [cite: 32] */
         table {
             width: 100%;
             border-collapse: collapse;
-            text-align: center;
+            background: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 10px;
         }
 
-        th, td {
-            padding: 16px;
-            font-size: 0.95rem;
-            border-bottom: 1px solid var(--border-color);
+        th,
+        td {
+            padding: 12px 15px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
         }
 
         th {
-            background: rgba(15, 23, 42, 0.8);
-            color: var(--text-muted);
+            background-color: #34495e;
+            color: #fff;
             font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 0.05em;
         }
 
-        tr {
-            transition: background-color 0.2s ease;
-        }
-
-        tbody tr:hover {
-            background-color: rgba(255, 255, 255, 0.05);
+        tr:hover {
+            background-color: #f9f9f9;
         }
 
         .tag-tx {
-            color: var(--accent-tx);
-            font-weight: 600;
-            display: inline-block;
-            padding: 4px 12px;
-            background: rgba(16, 185, 129, 0.1);
-            border-radius: 20px;
-            font-size: 0.85rem;
+            color: #e74c3c;
+            font-weight: bold;
         }
 
         .tag-rx {
-            color: var(--accent-rx);
-            font-weight: 600;
-            display: inline-block;
-            padding: 4px 12px;
-            background: rgba(59, 130, 246, 0.1);
-            border-radius: 20px;
-            font-size: 0.85rem;
+            color: #3498db;
+            font-weight: bold;
         }
 
-        .val {
-            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-            font-weight: 400;
+        /* 防火墙表单样式 [cite: 32, 45] */
+        .form-card {
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
         }
 
-        .ip-cell {
-            font-weight: 600;
-            border-right: 1px solid var(--border-color);
-            vertical-align: middle;
-            color: #fff;
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .form-group {
+            display: flex;
+            flex-direction: column;
         }
 
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .form-group label {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 5px;
+            font-weight: bold;
         }
 
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .charts-container {
-                grid-template-columns: 1fr;
-            }
+        .form-group input,
+        .form-group select {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .btn-submit {
+            background-color: #27ae60;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.2s;
+            align-self: flex-end;
+        }
+
+        .btn-submit:hover {
+            background-color: #219653;
         }
     </style>
 </head>
+
 <body>
 
-    <header>
-        <h1>OpenWrt Traffic Monitor</h1>
-        <div class="subtitle">Real-time OpenWrt Traffic Monitoring</div>
-    </header>
-
-    <div class="charts-container">
-        <div id="txChart" class="chart-card"></div>
-        <div id="rxChart" class="chart-card"></div>
+    <div class="navbar">
+        <div class="nav-item active" onclick="switchPage('traffic-page')">📊 实时流量监控</div>
+        <div class="nav-item" onclick="switchPage('firewall-page')">🧱 防火墙配置</div>
     </div>
 
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Target IP</th>
-                    <th>Direction</th>
-                    <th>Total Bytes</th>
-                    <th>Peak Rate (B/s)</th>
-                    <th>Current (B/s)</th>
-                    <th>Avg (2s)</th>
-                    <th>Avg (10s)</th>
-                    <th>Avg (40s)</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody">
-                <!-- Data populated by JS -->
-            </tbody>
-        </table>
+    <div class="container">
+
+        <div id="traffic-page" class="page-panel active">
+            <h2>🌐 局域网实时网络流量监控大盘</h2>
+
+            <div class="charts-container">
+                <div id="txChart" class="chart"></div>
+                <div id="rxChart" class="chart"></div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>目的(源)IP地址</th>
+                        <th>数据包方向</th>
+                        <th>累计流量 (Bytes)</th>
+                        <th>峰值流量 (B/s)</th>
+                        <th>当前速率 (B/s)</th>
+                        <th>平均流量(过往2s)</th>
+                        <th>平均流量(过往10s)</th>
+                        <th>平均流量(过往40s)</th>
+                    </tr>
+                </thead>
+                <tbody id="trafficTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <div id="firewall-page" class="page-panel">
+            <h2>🧱 嵌入式防火墙控制中心</h2>
+
+            <div class="form-card">
+                <h3>➕ 添加新的访问控制规则</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="protocolSelect">协议类型</label>
+                        <select id="protocolSelect">
+                            <option value="tcp">TCP</option>
+                            <option value="udp">UDP</option>
+                            <option value="icmp">ICMP</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="srcIpInput">源 IP 地址</label>
+                        <input type="text" id="srcIpInput" placeholder="如: 192.168.228.100">
+                    </div>
+                    <div class="form-group">
+                        <label for="destPortInput">目的端口 (可选)</label>
+                        <input type="text" id="destPortInput" placeholder="如: 80 (ICMP请留空)">
+                    </div>
+                    <div class="form-group">
+                        <label for="actionSelect">处理动作</label>
+                        <select id="actionSelect">
+                            <option value="REJECT">REJECT (拒绝入站/转发)</option>
+                            <option value="DROP">DROP (直接丢弃数据包)</option>
+                            <option value="ACCEPT">ACCEPT (允许通过)</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn-submit" onclick="submitFirewallRule()">应用防火墙规则</button>
+            </div>
+
+            <h3>📋 当前生效的自定义规则列表</h3>
+            <table>
+                <thead>
+                    <tr style="background-color: #7f8c8d;">
+                        <th>规则序号</th>
+                        <th>协议</th>
+                        <th>源地址区域</th>
+                        <th>源 IP</th>
+                        <th>目的端口</th>
+                        <th>动作 (Target)</th>
+                    </tr>
+                </thead>
+                <tbody id="firewallTableBody">
+                </tbody>
+            </table>
+        </div>
+
     </div>
 
     <script>
-        // Apply Dark Theme to Echarts
-        const txChart = echarts.init(document.getElementById('txChart'), 'dark', { background: 'transparent' });
-        const rxChart = echarts.init(document.getElementById('rxChart'), 'dark', { background: 'transparent' });
-        
-        let timeData = [];
-        let ipSeriesData = {}; 
+        // --- 1. 导航栏页面切换逻辑  ---
+        function switchPage(pageId) {
+            // 切换菜单按钮高亮
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            event.target.classList.add('active');
 
-        const chartBaseOptions = {
-            backgroundColor: 'transparent',
-            tooltip: { 
-                trigger: 'axis',
-                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                borderColor: 'rgba(255,255,255,0.1)',
-                textStyle: { color: '#fff' }
-            },
-            legend: { 
-                top: 25, 
-                textStyle: { color: '#94a3b8' },
-                icon: 'circle'
-            },
-            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-            xAxis: { 
-                type: 'category', 
-                data: timeData, 
-                boundaryGap: false,
-                axisLine: { lineStyle: { color: '#334155' } },
-                axisLabel: { color: '#94a3b8' }
-            },
-            yAxis: { 
-                type: 'value', 
-                name: 'Rate (Bytes/s)',
-                splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
-                axisLine: { show: false },
-                axisLabel: { color: '#94a3b8' },
-                nameTextStyle: { color: '#94a3b8', padding: [0, 0, 0, 20] }
-            },
+            // 切换显示面板
+            document.querySelectorAll('.page-panel').forEach(panel => panel.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+
+            // 如果切换到防火墙页面，刷新一次列表 [cite: 32]
+            if (pageId === 'firewall-page') {
+                fetchAndShowFirewallRules();
+            }
+        }
+
+        // --- 2. 流量监控模块核心逻辑 (ECharts + 1秒轮询) ---
+        const txChart = echarts.init(document.getElementById('txChart'));
+        const rxChart = echarts.init(document.getElementById('rxChart'));
+
+        let timeData = [];
+        let ipSeriesData = {};
+
+        const chartOptions = {
+            tooltip: { trigger: 'axis' },
+            legend: { top: 30 },
+            xAxis: { type: 'category', data: timeData, boundaryGap: false },
+            yAxis: { type: 'value', name: '速率 (Bytes/s)' },
             series: []
         };
 
-        txChart.setOption({ 
-            ...chartBaseOptions, 
-            title: { text: 'TX Rate (Upload)', left: '0', textStyle: { color: '#fff', fontSize: 18, fontWeight: 600 } }
-        });
-        
-        rxChart.setOption({ 
-            ...chartBaseOptions, 
-            title: { text: 'RX Rate (Download)', left: '0', textStyle: { color: '#fff', fontSize: 18, fontWeight: 600 } }
-        });
+        txChart.setOption({ ...chartOptions, title: { text: '发送速率趋势 (TX)', left: 'center' } });
+        rxChart.setOption({ ...chartOptions, title: { text: '接收速率趋势 (RX)', left: 'center' } });
 
-        // Format bytes for readability
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        }
+        // 定时拉取流量 JSON 数据的函数 
+        async function fetchAndUpdateTraffic() {
+            // 如果当前不在流量页面，停止更新以节省浏览器性能
+            if (!document.getElementById('traffic-page').classList.contains('active')) return;
 
-        async function fetchAndUpdateData() {
             try {
                 const response = await fetch('/traffic.json?t=' + new Date().getTime());
                 const data = await response.json();
-                
-                const tbody = document.getElementById('tableBody');
-                tbody.innerHTML = ''; 
 
-                const now = new Date().toLocaleTimeString('en-US', { hour12: false });
-                if (timeData.length > 20) timeData.shift(); 
+                const tbody = document.getElementById('trafficTableBody');
+                tbody.innerHTML = ''; // 清空旧表格
+
+                const now = new Date().toLocaleTimeString();
+                if (timeData.length > 20) timeData.shift();
                 timeData.push(now);
 
                 let txSeries = [];
                 let rxSeries = [];
 
                 data.forEach(ipData => {
-                    // Update Table
+                    // 动态重绘表格行 [cite: 38-42]
                     tbody.innerHTML += `
                         <tr>
-                            <td rowspan="2" class="ip-cell">${ipData.ip}</td>
-                            <td><span class="tag-tx">TX (Out)</span></td>
-                            <td class="val">${formatBytes(ipData.tx_tot)}</td>
-                            <td class="val">${formatBytes(ipData.tx_peak)}</td>
-                            <td class="val">${formatBytes(ipData.tx_rate)}</td>
-                            <td class="val">${formatBytes(ipData.tx_2s)}</td>
-                            <td class="val">${formatBytes(ipData.tx_10s)}</td>
-                            <td class="val">${formatBytes(ipData.tx_40s)}</td>
+                            <td rowspan="2" style="border-right: 1px solid #ddd; vertical-align: middle;"><b>${ipData.ip}</b></td>
+                            <td class="tag-tx">发送 (TX)</td>
+                            <td>${ipData.tx_tot}</td><td>${ipData.tx_peak}</td><td>${ipData.tx_rate}</td>
+                            <td>${ipData.tx_2s}</td><td>${ipData.tx_10s}</td><td>${ipData.tx_40s}</td>
                         </tr>
                         <tr>
-                            <td><span class="tag-rx">RX (In)</span></td>
-                            <td class="val">${formatBytes(ipData.rx_tot)}</td>
-                            <td class="val">${formatBytes(ipData.rx_peak)}</td>
-                            <td class="val">${formatBytes(ipData.rx_rate)}</td>
-                            <td class="val">${formatBytes(ipData.rx_2s)}</td>
-                            <td class="val">${formatBytes(ipData.rx_10s)}</td>
-                            <td class="val">${formatBytes(ipData.rx_40s)}</td>
+                            <td class="tag-rx">接收 (RX)</td>
+                            <td>${ipData.rx_tot}</td><td>${ipData.rx_peak}</td><td>${ipData.rx_rate}</td>
+                            <td>${ipData.rx_2s}</td><td>${ipData.rx_10s}</td><td>${ipData.rx_40s}</td>
                         </tr>
                     `;
 
-                    // Update Chart Data
+                    // 准备折线图历史
                     if (!ipSeriesData[ipData.ip]) {
                         ipSeriesData[ipData.ip] = { txHistory: [], rxHistory: [] };
                     }
-                    
                     if (ipSeriesData[ipData.ip].txHistory.length > 20) ipSeriesData[ipData.ip].txHistory.shift();
                     if (ipSeriesData[ipData.ip].rxHistory.length > 20) ipSeriesData[ipData.ip].rxHistory.shift();
-                    
+
                     ipSeriesData[ipData.ip].txHistory.push(ipData.tx_rate);
                     ipSeriesData[ipData.ip].rxHistory.push(ipData.rx_rate);
 
                     if (ipData.tx_tot > 0 || ipData.rx_tot > 0) {
-                        txSeries.push({
-                            name: ipData.ip, 
-                            type: 'line', 
-                            smooth: true,
-                            symbolSize: 6,
-                            lineStyle: { width: 3 },
-                            areaStyle: { opacity: 0.1 },
-                            data: ipSeriesData[ipData.ip].txHistory
-                        });
-                        rxSeries.push({
-                            name: ipData.ip, 
-                            type: 'line', 
-                            smooth: true,
-                            symbolSize: 6,
-                            lineStyle: { width: 3 },
-                            areaStyle: { opacity: 0.1 },
-                            data: ipSeriesData[ipData.ip].rxHistory
-                        });
+                        txSeries.push({ name: ipData.ip + " (TX)", type: 'line', smooth: true, data: ipSeriesData[ipData.ip].txHistory });
+                        rxSeries.push({ name: ipData.ip + " (RX)", type: 'line', smooth: true, data: ipSeriesData[ipData.ip].rxHistory });
                     }
                 });
 
@@ -339,16 +349,94 @@
                 rxChart.setOption({ xAxis: { data: timeData }, series: rxSeries });
 
             } catch (error) {
-                console.error('Failed to fetch traffic data:', error);
+                console.log('流量数据暂未生成，等待下一秒轮询...');
+            }
+        }
+        // 开启流量监控永动机（每秒拉取一次） 
+        setInterval(fetchAndUpdateTraffic, 1000);
+
+
+        // --- 3. 防火墙模块核心逻辑 (POST发消息 + GET规则列表) ---
+
+        // 【前端向后端发送消息】：提交表单数据 [cite: 32]
+        async function submitFirewallRule() {
+            const srcIp = document.getElementById('srcIpInput').value.trim();
+            if (!srcIp) {
+                alert("请输入合法的源 IP 地址！");
+                return;
+            }
+
+            // 打包数据包裹 
+            const rulePayload = {
+                protocol: document.getElementById('protocolSelect').value,
+                src_ip: srcIp,
+                dest_port: document.getElementById('destPortInput').value.trim(),
+                action: document.getElementById('actionSelect').value
+            };
+
+            try {
+                // 向 C 语言监听的 8080 端口发起连接并 write() 数据 
+                const routerIp = window.location.hostname || '192.168.228.3';
+                const response = await fetch(`http://${routerIp}:8080/api/firewall/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(rulePayload)
+                });
+
+                // 读取 C 后端 read() 传回来的回信消息 [cite: 49]
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    alert("🎉 成功通知：\n" + result.message);
+                    // 成功后，重新索要一次规则列表刷新展示 [cite: 32, 50]
+                    fetchAndShowFirewallRules();
+                } else {
+                    alert("❌ 失败警告：\n" + result.message);
+                }
+            } catch (err) {
+                alert("网络无法连接到 C 语言后端 API 接口，请确保 ./firewall_api 正在后台运行。");
             }
         }
 
-        setInterval(fetchAndUpdateData, 1000);
-        
-        window.addEventListener('resize', () => { 
-            txChart.resize(); 
-            rxChart.resize(); 
-        });
+        // 【前端接收后端推送消息】：拉取并展示系统现有防火墙条目 [cite: 32]
+        async function fetchAndShowFirewallRules() {
+            try {
+                // 注意：这里为了不增加 C 后端底层文本解析的复杂负担，
+                // 我们可以直接读取 uhttpd 或后端提供的列表接口。本实验建议采用模拟/实时联动
+                const routerIp = window.location.hostname || '192.168.228.3';
+                const response = await fetch(`http://${routerIp}:8080/api/firewall/list`);
+                const rules = await response.json();
+
+                const fwTbody = document.getElementById('firewallTableBody');
+                fwTbody.innerHTML = ''; // 清空旧表
+
+                if (rules.length === 0) {
+                    fwTbody.innerHTML = `<tr><td colspan="6" style="color:#999;">当前系统内暂无自定义防火墙规则</td></tr>`;
+                    return;
+                }
+
+                rules.forEach((rule, index) => {
+                    fwTbody.innerHTML += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td><mark style="background:#f1c40f;padding:2px 6px;border-radius:3px;">${rule.proto.toUpperCase()}</mark></td>
+                            <td>lan</td>
+                            <td>${rule.src_ip}</td>
+                            <td>${rule.dest_port ? rule.dest_port : '所有端口'}</td>
+                            <td><span style="color:${rule.target === 'ACCEPT' ? '#27ae60' : '#c0392b'}; font-weight:bold;">${rule.target}</span></td>
+                        </tr>
+                    `;
+                });
+            } catch (e) {
+                // 如果后端没有实现查看列表接口，则给学生提供一个友好的容错静态占位符
+                const fwTbody = document.getElementById('firewallTableBody');
+                fwTbody.innerHTML = `<tr><td colspan="6" style="color:#e67e22;">规则列表接口未就绪，但在终端执行 uci show firewall 检查已同步。</td></tr>`;
+            }
+        }
+
+        // 窗口大小变化时自适应图表布局
+        window.addEventListener('resize', () => { txChart.resize(); rxChart.resize(); });
     </script>
 </body>
+
 </html>

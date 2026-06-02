@@ -10,7 +10,7 @@ SRC_DIR = src
 OBJ_DIR = obj
 
 # Sources and Objects
-SRCS = $(wildcard $(SRC_DIR)/*.c)
+SRCS = $(wildcard $(SRC_DIR)/*.c $(SRC_DIR)/*/*.c)
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
 
 # Default target
@@ -21,19 +21,20 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # Compile source files
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c -o $@ $<
-
-# Create object directory if it doesn't exist
-$(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)
 
 # Install rule (typical for OpenWrt/Linux)
 install: $(TARGET)
 	install -d $(DESTDIR)/usr/sbin
 	install -m 755 $(TARGET) $(DESTDIR)/usr/sbin/
-	install -d $(DESTDIR)/www
-	install -m 644 web/index.html $(DESTDIR)/www/net_trail.html
+	install -d $(DESTDIR)/www/net_trail
+	install -d $(DESTDIR)/www/cgi-bin
+	install -m 644 web/index.html $(DESTDIR)/www/net_trail/index.html
+	if [ -d web/css ]; then cp -r web/css $(DESTDIR)/www/net_trail/; fi
+	if [ -d web/js ]; then cp -r web/js $(DESTDIR)/www/net_trail/; fi
+	install -m 755 cgi-bin/firewall_cmd.sh $(DESTDIR)/www/cgi-bin/firewall_cmd.sh
 
 # Clean build artifacts
 clean:
