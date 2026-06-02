@@ -61,7 +61,7 @@ if [ "$COMMAND" = "add" ]; then
     
     # 设定限制的来源区域 (Zone)
     # 注意：此处限制来源为 wan 区域。如果需要限制宿主机 (lan区域) 访问，应将其修改为 '*' 或 'lan'
-    uci set firewall.@rule[-1].src='wan'
+    uci set firewall.@rule[-1].src='*'
     uci set firewall.@rule[-1].target="$TARGET"
     
     # 按需设置协议参数
